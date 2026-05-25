@@ -1,0 +1,174 @@
+@model VacationTracker.Web.ViewModels.Leaves.EmployeeLeaveDetailsViewModel
+
+@{
+    ViewData["Title"] = "Отпуски";
+}
+
+<section class="page-header">
+    <div>
+        <span class="eyebrow">Отпуски</span>
+        <h1 class="page-title">@Model.EmployeeName</h1>
+        <p class="page-subtitle">Година @Model.Year: общо <strong>@Model.TotalDays</strong>, използвани <strong>@Model.UsedDays</strong>, оставащи <strong>@Model.RemainingDays</strong>.</p>
+    </div>
+
+    <div class="header-actions">
+        <a asp-controller="Employees" asp-action="Index" asp-route-year="@Model.Year" class="btn btn-light-action">Назад към служители</a>
+    </div>
+</section>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="status-banner">@statusMessage</div>
+}
+
+<section class="directory-grid">
+    <article class="panel-card">
+        <div class="panel-card-header">
+            <div>
+                <h2>Нов отпуск</h2>
+                <p>Въведи периода и броя дни (не изчисляваме автоматично работни/почивни дни).</p>
+            </div>
+        </div>
+
+        <form asp-action="Add" method="post" class="stack-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="EmployeeId" value="@Model.EmployeeId" />
+            <input type="hidden" name="Year" value="@Model.Year" />
+
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+            <div class="form-row">
+                <div>
+                    <label asp-for="AddEntry.StartDate" class="form-label"></label>
+                    <input id="StartDate" name="StartDate" class="form-control" type="date" value="@Model.AddEntry.StartDate.ToString("yyyy-MM-dd")" />
+                    <span asp-validation-for="AddEntry.StartDate" class="field-error"></span>
+                </div>
+                <div>
+                    <label asp-for="AddEntry.EndDate" class="form-label"></label>
+                    <input id="EndDate" name="EndDate" class="form-control" type="date" value="@Model.AddEntry.EndDate.ToString("yyyy-MM-dd")" />
+                    <span asp-validation-for="AddEntry.EndDate" class="field-error"></span>
+                </div>
+            </div>
+
+            <div class="form-row form-row-tight">
+                <div>
+                    <label asp-for="AddEntry.UsedDays" class="form-label"></label>
+                    <input id="UsedDays" name="UsedDays" class="form-control" type="number" min="1" max="365" value="@Model.AddEntry.UsedDays" />
+                    <span asp-validation-for="AddEntry.UsedDays" class="field-error"></span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-accent">Добави отпуск</button>
+        </form>
+    </article>
+
+    <article class="panel-card">
+        <div class="panel-card-header">
+            <div>
+                <h2>Въведени отпуски</h2>
+                <p>@Model.Entries.Count @(Model.Entries.Count == 1 ? "запис" : "записа") за @Model.Year.</p>
+            </div>
+        </div>
+
+        @if (Model.Entries.Count == 0)
+        {
+            <div class="empty-state">
+                <h3>Няма въведени отпуски</h3>
+                <p>Добави първия отпуск от формата вляво.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="employee-table">
+                    <thead>
+                        <tr>
+                            <th>От</th>
+                            <th>До</th>
+                            <th>Дни</th>
+                            <th class="actions-cell">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in Model.Entries)
+                        {
+                            <tr>
+                                <td>@entry.StartDate.ToString("dd.MM.yyyy")</td>
+                                <td>@entry.EndDate.ToString("dd.MM.yyyy")</td>
+                                <td><strong>@entry.UsedDays</strong></td>
+                                <td class="actions-cell">
+                                    <form asp-action="Delete" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="employeeId" value="@Model.EmployeeId" />
+                                        <input type="hidden" name="leaveEntryId" value="@entry.Id" />
+                                        <input type="hidden" name="year" value="@Model.Year" />
+                                        <button type="submit" class="btn btn-danger-soft" onclick="return confirm('Сигурен ли си, че искаш да изтриеш този запис?');">
+                                            Изтрий
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </article>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const startInput = document.getElementById("StartDate");
+            const endInput = document.getElementById("EndDate");
+            const usedDaysInput = document.getElementById("UsedDays");
+            if (!startInput || !endInput || !usedDaysInput) return;
+
+            let userEditedUsedDays = false;
+            usedDaysInput.addEventListener("input", function () {
+                userEditedUsedDays = true;
+            });
+
+            function parseIsoDate(value) {
+                if (!value) return null;
+                const parts = value.split("-");
+                if (parts.length !== 3) return null;
+                const y = Number(parts[0]);
+                const m = Number(parts[1]);
+                const d = Number(parts[2]);
+                if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+                return new Date(y, m - 1, d);
+            }
+
+            function countBusinessDaysInclusive(startDate, endDate) {
+                if (endDate < startDate) return null;
+                let count = 0;
+                const cursor = new Date(startDate.getTime());
+                while (cursor <= endDate) {
+                    const day = cursor.getDay(); // 0=Sun, 6=Sat
+                    if (day !== 0 && day !== 6) count++;
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+                return count;
+            }
+
+            function maybeUpdateUsedDays() {
+                const startDate = parseIsoDate(startInput.value);
+                const endDate = parseIsoDate(endInput.value);
+                if (!startDate || !endDate) return;
+
+                const businessDays = countBusinessDaysInclusive(startDate, endDate);
+                if (businessDays === null) return;
+
+                // Only auto-fill if the user hasn't manually overridden it yet.
+                if (!userEditedUsedDays) {
+                    usedDaysInput.value = String(Math.max(1, businessDays));
+                }
+            }
+
+            startInput.addEventListener("change", maybeUpdateUsedDays);
+            endInput.addEventListener("change", maybeUpdateUsedDays);
+        })();
+    </script>
+}

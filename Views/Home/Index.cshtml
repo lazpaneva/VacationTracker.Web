@@ -1,0 +1,43 @@
+@model VacationTracker.Web.ViewModels.HomeDashboardViewModel
+
+@{
+    ViewData["Title"] = "Начало";
+}
+
+<section class="hero-panel">
+    <div class="hero-copy">
+        <span class="eyebrow">ASP.NET локален проект</span>
+        <h1>@Model.ProductName</h1>
+        <p class="hero-summary">@Model.Summary</p>
+    </div>
+
+    <div class="hero-card">
+        <h2>Какво ще има в приложението</h2>
+        <ul class="feature-list">
+            @foreach (var item in Model.Highlights)
+            {
+                <li>@item</li>
+            }
+        </ul>
+    </div>
+</section>
+
+<section class="content-grid">
+    <article class="info-card">
+        <h2>Подход</h2>
+        <p>
+            Интерфейсът ще бъде спокоен и подреден, така че ежедневната работа по отпуските да става бързо,
+            без излишни екрани и без претоварване.
+        </p>
+    </article>
+
+    <article class="info-card">
+        <h2>Следващи етапи</h2>
+        <ol class="step-list">
+            @foreach (var step in Model.NextSteps)
+            {
+                <li>@step</li>
+            }
+        </ol>
+    </article>
+</section>

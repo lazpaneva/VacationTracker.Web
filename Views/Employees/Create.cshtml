@@ -1,0 +1,63 @@
+@model VacationTracker.Web.ViewModels.Employees.CreateEmployeePageViewModel
+
+@{
+    ViewData["Title"] = "Нов служител";
+}
+
+<section class="page-header">
+    <div>
+        <span class="eyebrow">Нов запис</span>
+        <h1 class="page-title">Добавяне на служител</h1>
+        <p class="page-subtitle">Всеки нов служител автоматично получава отпуск за избраната година.</p>
+    </div>
+</section>
+
+<article class="panel-card create-panel">
+    <form asp-action="Create" method="post" class="stack-form">
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+        <div class="form-row">
+            <div>
+                <label asp-for="Input.FirstName" class="form-label"></label>
+                <input asp-for="Input.FirstName" class="form-control" />
+                <span asp-validation-for="Input.FirstName" class="field-error"></span>
+            </div>
+
+            <div>
+                <label asp-for="Input.MiddleName" class="form-label"></label>
+                <input asp-for="Input.MiddleName" class="form-control" />
+                <span asp-validation-for="Input.MiddleName" class="field-error"></span>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label asp-for="Input.Year" class="form-label">Година</label>
+                <select asp-for="Input.Year" class="form-select">
+                    @foreach (var year in Model.AvailableYears)
+                    {
+                        <option value="@year">@year</option>
+                    }
+                </select>
+                <span asp-validation-for="Input.Year" class="field-error"></span>
+            </div>
+
+            <div>
+                <label asp-for="Input.DefaultAnnualLeaveDays" class="form-label"></label>
+                <input asp-for="Input.DefaultAnnualLeaveDays" class="form-control" />
+                <span asp-validation-for="Input.DefaultAnnualLeaveDays" class="field-error"></span>
+            </div>
+        </div>
+
+        <div class="action-row">
+            <button type="submit" class="btn btn-accent">Запази служител</button>
+            <a asp-action="Index" asp-route-year="@Model.Input.Year" class="btn btn-light-action">Назад към списъка</a>
+        </div>
+    </form>
+</article>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

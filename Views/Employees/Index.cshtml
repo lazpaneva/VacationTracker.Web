@@ -1,0 +1,139 @@
+@model VacationTracker.Web.ViewModels.Employees.EmployeeDirectoryViewModel
+
+@{
+    ViewData["Title"] = "Служители";
+}
+
+<section class="page-header">
+    <div>
+        <span class="eyebrow">Списък</span>
+        <h1 class="page-title">Служители</h1>
+        <p class="page-subtitle">Преглед за @Model.SelectedYear: отпуск, използвани и оставащи дни.</p>
+    </div>
+
+    <div class="header-actions">
+        <form asp-action="Index" method="get" class="year-filter">
+            <label asp-for="SelectedYear" class="form-label">Година</label>
+            <select asp-for="SelectedYear" name="year" class="form-select" onchange="this.form.submit()">
+                @foreach (var year in Model.AvailableYears)
+                {
+                    <option value="@year">@year</option>
+                }
+            </select>
+        </form>
+
+        <a asp-action="Create" asp-route-year="@Model.SelectedYear" class="btn btn-accent">Добави служител</a>
+        <a asp-action="ExportRemaining" asp-route-year="@Model.SelectedYear" class="btn btn-light-action">Справка (CSV)</a>
+    </div>
+</section>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="status-banner">@statusMessage</div>
+}
+
+<article class="panel-card">
+    <div class="panel-card-header">
+        <div>
+            <h2>Служители за @Model.SelectedYear</h2>
+            <p>@Model.Employees.Count @(Model.Employees.Count == 1 ? "служител" : "служители") за преглед.</p>
+        </div>
+    </div>
+
+    @if (Model.AvailableExistingEmployees.Count > 0)
+    {
+        <div class="inline-form" style="margin-bottom: 1rem;">
+            <form asp-action="AddExistingToYear" method="post" class="inline-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Year" value="@Model.SelectedYear" />
+
+                <label class="form-label" style="margin:0;">Добави съществуващ служител за годината</label>
+                <select name="EmployeeId" class="form-select" style="min-width: 18rem;">
+                    @foreach (var item in Model.AvailableExistingEmployees)
+                    {
+                        <option value="@item.Id">@item.FullName</option>
+                    }
+                </select>
+                <input type="number" name="TotalDays" value="@Model.AddExisting.TotalDays" min="1" max="365" class="form-control small-input" />
+                <button type="submit" class="btn btn-light-action">Добави</button>
+            </form>
+        </div>
+    }
+
+    @if (Model.Employees.Count == 0)
+    {
+        <div class="empty-state">
+            <h3>Няма служители за тази година</h3>
+            <p>Добави служител за @Model.SelectedYear, за да се появи в списъка.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="employee-table">
+                <thead>
+                    <tr>
+                        <th>Служител</th>
+                        <th>Дни отпуск</th>
+                        <th>Използвани</th>
+                        <th>Оставащи</th>
+                        <th class="actions-cell">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var employee in Model.Employees)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@employee.FullName</strong>
+                                <div class="hint-text">Стандарт: @employee.DefaultAnnualLeaveDays</div>
+                            </td>
+                            <td>
+                                <form asp-action="UpdateAnnualLeave" method="post" class="inline-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="EmployeeId" value="@employee.Id" />
+                                    <input type="hidden" name="Year" value="@Model.SelectedYear" />
+                                    <input type="number"
+                                           name="TotalDays"
+                                           value="@employee.AnnualLeaveDaysForYear"
+                                           min="1"
+                                           max="365"
+                                           class="form-control small-input" />
+                                    <button type="submit" class="btn btn-light-action">Запази</button>
+                                </form>
+
+                                <div class="hint-text">
+                                    @(employee.HasYearSpecificOverride ? "Отделна стойност за годината." : "Ползва стандартната стойност.")
+                                </div>
+                            </td>
+                            <td><strong>@employee.UsedDaysForYear</strong></td>
+                            <td><strong>@employee.RemainingDaysForYear</strong></td>
+                            <td class="actions-cell">
+                                <div class="action-row">
+                                    <a asp-controller="Leaves"
+                                       asp-action="ForEmployee"
+                                       asp-route-employeeId="@employee.Id"
+                                       asp-route-year="@Model.SelectedYear"
+                                       class="btn btn-light-action">Отпуски</a>
+
+                                    <form asp-action="Delete" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="employeeId" value="@employee.Id" />
+                                        <input type="hidden" name="year" value="@Model.SelectedYear" />
+                                        <button type="submit" class="btn btn-danger-soft" onclick="return confirm('Сигурен ли си, че искаш да изтриеш този служител?');">
+                                            Изтрий
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</article>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
